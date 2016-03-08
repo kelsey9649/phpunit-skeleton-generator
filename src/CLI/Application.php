@@ -67,7 +67,7 @@ class Application extends AbstractApplication
 
         $this->add(new GenerateClassCommand);
         $this->add(new GenerateTestCommand);
-        $this->add(new GenerateModuleTestsCommand);
+        $this->add(new GenerateTestsCommand);
     }
 
     /**

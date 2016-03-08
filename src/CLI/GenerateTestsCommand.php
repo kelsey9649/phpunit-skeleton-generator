@@ -16,11 +16,9 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
  
-Class GenerateModuleTestsCommand extends Command
+Class GenerateTestsCommand extends Command
 {
     private $root;
-    
-    private $moduleName;
     
     private $sourceCodePath;
     
@@ -33,20 +31,8 @@ Class GenerateModuleTestsCommand extends Command
      */
     protected function configure()
     {
-        $this->addOption(
-            'bootstrap',
-            null,
-            InputOption::VALUE_REQUIRED,
-            'A "bootstrap" PHP file that is run at startup'
-        );
-        
-        $this->setName('generate-module-tests')
-             ->setDescription('Generates all tests within a module')
-             ->addArgument(
-                 'module-path',
-                 InputArgument::OPTIONAL,
-                 'The root path of the module to scan'
-             )
+        $this->setName('generate-tests')
+             ->setDescription('Generates tests for all files within a directory')
              ->addArgument(
                  'source-path',
                  InputArgument::OPTIONAL,
@@ -56,7 +42,12 @@ Class GenerateModuleTestsCommand extends Command
                  'test-path',
                  InputArgument::OPTIONAL,
                  'The directory that the test code is stored in'
-             );
+             )->addOption(
+                'bootstrap',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'A "bootstrap" PHP file that is run at startup'
+            );
 
         parent::configure();
     }
@@ -67,75 +58,41 @@ Class GenerateModuleTestsCommand extends Command
             
             include $input->getOption('bootstrap');
         }
-        
-        if ($input->getArgument('module-path')) {
 
-            if (substr($input->getArgument('module-path'), 0, 1) === '/') {
+        // Default root path
+        $this->root = getcwd();
+        print(($output->isVerbose()) ? "Current Working Directory: {$this->root}\n" : '');
 
-                $this->root = rtrim($input->getArgument('module-path'),'/');
-
-            } else {
-
-                $this->root = getcwd().'/'.rtrim($input->getArgument('module-path'),'/');
-            }
-
-            
-        } else {
-            // Default root path
-            $this->root = getcwd();
-        }
-        
-        if ($output->isVerbose()) {
-            
-            echo "Current Working Directory: ".$this->root."\n";
-        }
-        
-        $this->moduleName = basename($this->root);
-        
-        if ($output->isVerbose()) {
-            
-            echo "Current Module's Name: ".$this->moduleName."\n";
-        }
-        
         if ($input->getArgument('source-path')) {
             
-            $this->sourceCodePath = rtrim($input->getArgument('source-path'),'/');
+            $this->sourceCodePath = rtrim($input->getArgument('source-path'), '/');
             
         } else {
+
             // Default source path
-            $this->sourceCodePath = $this->root."/src/".$this->moduleName;
+            $this->sourceCodePath = $this->root."/src";
         }
         
-        if ($output->isVerbose()) {
-            
-            echo "Source Code Path: ".$this->sourceCodePath."\n";
-        }
+        print($output->isVerbose() ? "Source Code Path: {$this->sourceCodePath}\n" : '');
+
         
         if ($input->getArgument('test-path')) {
             
-            $this->testCodePath = rtrim($input->getArgument('test-path'),'/');
+            $this->testCodePath = rtrim($input->getArgument('test-path'), '/');
             
         } else {
+
             // Default test path
-            $this->testCodePath = $this->root."/tests/".$this->moduleName."Test";
+            $this->testCodePath = $this->root."/tests";
         }
         
-        if ($output->isVerbose()) {
-            
-            echo "Test Code Path: ".$this->testCodePath."\n";
-        }
+        print($output->isVerbose() ? "Test Code Path: {$this->testCodePath}\n" : '');
 
         // Check for a source code directory to generate tests from
         if (!file_exists($this->sourceCodePath)) {
             
-            echo "There is not a source code directory located at $this->sourceCodePath. Are you sure you are in the 
-                    root of a module?";
+            print("There is not a source code directory located at $this->sourceCodePath.");
             return;    
-        }
-
-        if (!file_exists($this->root.'/tests')) {
-
-            mkdir($this->root.'/tests');
         }
         
         // Check for the test directory we will store tests in
@@ -148,13 +105,15 @@ Class GenerateModuleTestsCommand extends Command
 
         echo "Done.\n";
     }
-    
+
+    /**
+     * TODO do not create empty directories
+     * @param $directory
+     * @param $output
+     */
     private function descendDirectory($directory, &$output)
     {
-        if ($output->isVerbose()) {
-            
-            echo "Scanning $directory...\n";
-        }
+        print(($output->isVerbose()) ? "Scanning {$directory}...\n" : '');
         
         // If it is not a directory stop here
         if (!is_dir($directory)) {
@@ -164,7 +123,10 @@ Class GenerateModuleTestsCommand extends Command
         
         //Grab the relative path
         $relativePath = substr($directory, strlen($this->sourceCodePath));
+        print(($output->isVerbose()) ? "Relative path: {$relativePath}\n" : '');
+
         $namespaceRelativePath = str_replace("/", "\\", $relativePath);
+        print(($output->isVerbose()) ? "Namespace relative path: {$namespaceRelativePath}\n" : '');
 
         if (!file_exists($this->testCodePath.$relativePath)) {
 
@@ -191,7 +153,7 @@ Class GenerateModuleTestsCommand extends Command
                     // Create it
                     if ($output->isVerbose()) {
                         
-                        echo "Creating $relativePath/$child in the test code path...";
+                        echo "Creating {$relativePath}/{$child} in the test code path...\n";
                     }
                     
                     mkdir($this->testCodePath.$relativePath.'/'.$child);
@@ -199,11 +161,18 @@ Class GenerateModuleTestsCommand extends Command
                 
                 $this->descendDirectory($directory.'/'.$child, $output);
             }  
-            
+
+            $childFileName = $directory.'/'.$child;
+
             // If the child is a file
-            if (is_file($directory.'/'.$child)) {
+            if (is_file($childFileName)) {
                 
                 $nameParts = explode(".",$child);
+
+                if ($nameParts[1] !== 'php') {
+                    continue;
+                }
+
                 $filename = $nameParts[0].'Test.'.$nameParts[1];
                 
                 // And does not exist in the test code path
@@ -212,15 +181,27 @@ Class GenerateModuleTestsCommand extends Command
                     // Create it
                     if ($output->isVerbose()) {
                         
-                        echo "Creating $relativePath/$filename in the test code path...";
+                        echo "Creating {$relativePath}/{$filename} in the test code path...\n";
                     }
-                    
-                    file_put_contents($this->testCodePath.$relativePath.'/'.$filename, '');
+
+                    $newFile = $this->testCodePath;
+                    $newFile .= ($relativePath != '') ? $relativePath.'/' : '/';
+                    $newFile .= $filename;
+
+                    file_put_contents($newFile, '');
+
+                    $srcContent = file_get_contents($childFileName);
+                    preg_match('/namespace\s([a-zA-Z\\\]+)/', $srcContent, $matches);
+
+                    $namespace = '';
+                    if (count($matches) > 1) {
+                        $namespace = $matches[1];
+                    }
 
                     // Let's try generating the test file
-                    $input['class'] = $this->moduleName.$namespaceRelativePath."\\".basename($child,'.php');
-                    $input['class-source'] = $directory.'/'.$child;
-                    $input['test-class'] = $this->moduleName."Test".$namespaceRelativePath."\\".basename($filename,'.php');
+                    $input['class'] = $namespace."\\".basename($child,'.php');
+                    $input['class-source'] = $childFileName;
+                    $input['test-class'] = $namespace."\\".basename($filename,'.php');
                     $input['test-source'] = $this->testCodePath.$relativePath.'/'.$filename;
 
                     $generator = $this->getGenerator($input);
@@ -231,7 +212,7 @@ Class GenerateModuleTestsCommand extends Command
 
                         $output->writeln(
                             sprintf(
-                                'Wrote skeleton for "%s" to "%s".',
+                                "Wrote skeleton for \"%s\" to \"%s\".",
                                 $generator->getOutClassName(),
                                 $generator->getOutSourceFile()
                             )
