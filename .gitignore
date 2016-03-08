@@ -5,3 +5,8 @@ cache.properties
 composer.phar
 composer.lock
 vendor
+Vagrantfile
+.vagrant
+puphpet
+box.phar
+phpunit-skeleton-generator.phar
