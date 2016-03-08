@@ -1,12 +1,14 @@
-# PHPUnit Skeleton Generator
+# PHPUnit Skeleton Generator (with flavor!)
 
-`phpunit-skelgen` is a tool that can generate skeleton test classes from production code classes and vice versa.
+`phpunit-skelgen` is a tool that can generate skeleton test classes from production code classes and vice versa. A
+recent update has provided the ability to generate test files for an entire directory of php files (recursively).
 
 ## Installation
 
 ### PHP Archive (PHAR)
 
-The easiest way to obtain phpunit-skelgen is to download a [PHP Archive (PHAR)](http://php.net/phar) that has all required dependencies of phpunit-skelgen bundled in a single file:
+The easiest way to obtain phpunit-skelgen is to download a [PHP Archive (PHAR)](http://php.net/phar) that has all
+required dependencies of phpunit-skelgen bundled in a single file:
 
     wget https://phar.phpunit.de/phpunit-skelgen.phar
     chmod +x phpunit-skelgen.phar
@@ -19,7 +21,9 @@ You can also immediately use the PHAR after you have downloaded it, of course:
 
 ### Composer
 
-Simply add a dependency on `phpunit/phpunit-skeleton-generator` to your project's `composer.json` file if you use [Composer](http://getcomposer.org/) to manage the dependencies of your project. Here is a minimal example of a `composer.json` file that just defines a development-time dependency on phpunit/phpunit-skeleton-generator:
+Simply add a dependency on `phpunit/phpunit-skeleton-generator` to your project's `composer.json` file if you use
+[Composer](http://getcomposer.org/) to manage the dependencies of your project. Here is a minimal example of a
+`composer.json` file that just defines a development-time dependency on phpunit/phpunit-skeleton-generator:
 
     {
         "require-dev": {
